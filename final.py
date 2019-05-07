@@ -29,7 +29,7 @@ class Learner(object):
     	self.Q = np.zeros((self.hbins,self.vgbins,self.velbins,2,2)) # number states x number actions
     	self.stateCounts = np.zeros((self.hbins,self.vgbins,self.velbins,2)) # state space to track how many times you've visited a state
     	self.scmax = 0 # counter for state with maximum number of visits
-    	# self.rate = .2 # learning rate
+    	self.rate = 0.05 # learning rate
     	self.discount = .99 # discount rate
     	self.eps = 0.01 # episilon
     	self.g = None # TODO: adjust gravity later
@@ -44,7 +44,7 @@ class Learner(object):
         self.last_action = None
         self.last_reward = None
         self.g = None # adjust gravity
-
+        
     def __make_discrete(self, state):
     	# split distance to tree horiz (hbins)
     	horiz_dist = state["tree"]["dist"]
@@ -56,7 +56,7 @@ class Learner(object):
     	dist_val = state["monkey"]["top"]
     	self.vertvals.append(dist_val)
     	vert_to_top = floor(dist_val/self.size_vd)
-
+    		    	
         # split distance to tree vert (vgbins)
     	vert_dist = state["tree"]['top']-state["monkey"]["top"]
     	self.vertgapvals.append(vert_dist)
@@ -72,7 +72,7 @@ class Learner(object):
     		velocity = 1
 
     	return horiz_to_tree,vert_to_tree, velocity
-
+    
 
     def action_callback(self, state):
         '''
@@ -84,7 +84,7 @@ class Learner(object):
 
         # You'll need to select and action and return it.
         # Return 0 to swing and 1 to jump.
-
+        
         # if we've done this once then update
         if self.last_state != None:
         	if self.g == None:
@@ -101,11 +101,11 @@ class Learner(object):
         	if self.stateCounts[h][vg][vel][self.g] > self.scmax:
         		self.scmax = self.stateCounts[h][vg][vel][self.g]
         	calc_max = max(self.Q[h][vg][vel][self.g])
-        	new_Q = cur_Q + rate *(self.last_reward + self.discount*calc_max - cur_Q)
+        	new_Q = cur_Q + self.rate *(self.last_reward + self.discount*calc_max - cur_Q)
         	self.Q[h][vg][vel][self.g][la] = new_Q
         	if(self.Q[h][vg][vel][self.g][0] >= self.Q[h][vg][vel][self.g][1]):
         		self.last_action = 0
-        	else:
+        	else: 
         		self.last_action = 1
         	if npr.rand() < (self.eps/experience):
         		self.last_action = 1-self.last_action
@@ -141,7 +141,7 @@ def run_games(learner, hist, vertvals, horizvals, vertgapvals, velvals, iters = 
         # Loop until you hit something.
         while swing.game_loop():
             pass
-
+        
         # Save score history.
         hist.append(swing.score)
 
@@ -157,40 +157,23 @@ if __name__ == '__main__':
 	agent = Learner()
 
 	# Empty list to save history.
-	#hist = []
+	hist = []
 	vertvals = []
 	horizvals = []
 	vertgapvals = []
 	velvals = []
-	rate = 0
-	lrs = [0.05, 0.1, 0.2]
-	res_dict = []
 
-	# Run games.
-	for lr in lrs:
-		rate = lr
-		res = []
-		for i in range(10):
-			hist = []
-			run_games(agent, hist,  vertvals, horizvals, vertgapvals, velvals, 50, 1)
-			res.append(np.max(hist))
-		res_dict.append(res)
-	name = "lr.csv"
-	np.savetxt(name, res_dict, delimiter=",")
+	run_games(agent, hist,  vertvals, horizvals, vertgapvals, velvals, 50, 10)
+	
+	# Save history. 
+	np.save('hist',np.array(hist))
+	
+	# print history
+	plt.plot(hist)
+	plt.show()
+
+	# print history hist
+	plt.hist(hist)
+	plt.show()
 
 
-
-
-
-	# run_games(agent, hist,  vertvals, horizvals, vertgapvals, velvals, 75, 10)
-
-	# # Save history.
-	# np.save('hist',np.array(hist))
-
-	# # print history
-	# plt.plot(hist)
-	# plt.show()
-
-	# # print history hist
-	# plt.hist(hist)
-	# plt.show()
